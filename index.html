@@ -451,6 +451,46 @@
     .real-oven-photo{min-height:190px;}
   }
 
+  /* ================================
+     PANEL DE VENTAS
+  ================================= */
+  .sales-panel{
+    background:#fffaf0;
+    border:1px solid var(--sage);
+    border-radius:18px;
+    padding:18px;
+    margin:0 0 24px;
+    box-shadow:0 8px 22px rgba(47,74,55,.06);
+  }
+  .sales-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+  .sales-header h2{margin:0;color:var(--deep-green);font-family:'Playfair Display',serif;font-size:24px;}
+  .sales-stats{display:flex;gap:7px;flex-wrap:wrap;}
+  .stat{padding:6px 10px;border-radius:999px;font-family:'Bitter',serif;font-size:11px;font-weight:700;border:1px solid var(--sage);background:var(--cream);}
+  .stat.total{color:var(--deep-green);}
+  .stat.paid{background:var(--sold);color:var(--cream);border-color:var(--sold);}
+  .stat.pending{background:#c9822a;color:white;border-color:#c9822a;}
+  .sales-tools{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .sales-search{flex:1;min-width:200px;padding:10px 12px;border:1.5px solid var(--sage);border-radius:9px;font-family:'Jost',sans-serif;background:white;}
+  .sales-filter{padding:10px 12px;border:1.5px solid var(--sage);border-radius:9px;font-family:'Jost',sans-serif;background:white;color:var(--deep-green-2);}
+  .sales-table-wrapper{overflow-x:auto;border:1px solid var(--sage);border-radius:12px;}
+  .sales-table{width:100%;border-collapse:collapse;min-width:650px;background:#fffdf7;}
+  .sales-table th{background:var(--deep-green-2);color:var(--cream);padding:10px 9px;text-align:left;font-family:'Bitter',serif;font-size:12px;white-space:nowrap;}
+  .sales-table td{padding:9px;border-bottom:1px solid var(--cream-2);font-size:13px;vertical-align:middle;}
+  .sales-table tr:last-child td{border-bottom:none;}
+  .sales-table tbody tr:hover{background:var(--sage-soft);}
+  .number-badge-table{display:inline-flex;align-items:center;justify-content:center;width:35px;height:35px;border-radius:8px;background:var(--sage);color:var(--deep-green-2);font-family:'Bitter',serif;font-weight:700;}
+  .payment-badge{display:inline-block;padding:4px 9px;border-radius:999px;font-family:'Bitter',serif;font-size:11px;font-weight:700;white-space:nowrap;}
+  .payment-badge.paid{background:var(--sold);color:var(--cream);}
+  .payment-badge.pending{background:#c9822a;color:white;}
+  .sale-actions{display:flex;gap:5px;flex-wrap:wrap;}
+  .sale-action{border:none;border-radius:7px;padding:6px 8px;cursor:pointer;font-family:'Jost',sans-serif;font-size:11px;font-weight:600;transition:.15s ease;}
+  .sale-action:hover{transform:translateY(-1px);}
+  .sale-action:disabled{opacity:.55;cursor:wait;transform:none;}
+  .sale-action.payment{background:var(--sage-soft);color:var(--deep-green-2);}
+  .sale-action.free{background:#f2d8d4;color:#8c3f34;}
+  .empty-sales{text-align:center;padding:25px 15px;color:#777869;font-family:'Playfair Display',serif;font-style:italic;}
+  @media(max-width:600px){.sales-panel{padding:13px;}.sales-header h2{font-size:21px;}}
+
 </style>
 </head>
 <body>
@@ -515,6 +555,46 @@
   <div class="numbers-panel" id="captureArea">
     <div class="grid" id="grid"></div>
   </div>
+
+  <!-- ================================
+       PANEL DE VENTAS
+  ================================= -->
+  <div class="sales-panel">
+    <div class="sales-header">
+      <h2>📋 Ventas registradas</h2>
+      <div class="sales-stats">
+        <span class="stat total" id="statTotal">0 ventas</span>
+        <span class="stat paid" id="statPaid">0 pagadas</span>
+        <span class="stat pending" id="statPending">0 pendientes</span>
+      </div>
+    </div>
+
+    <div class="sales-tools">
+      <input type="search" id="salesSearch" class="sales-search" placeholder="🔎 Buscar por nombre, celular o número...">
+      <select id="salesFilter" class="sales-filter">
+        <option value="all">Todos</option>
+        <option value="paid">Pagados</option>
+        <option value="pending">Pendientes</option>
+      </select>
+    </div>
+
+    <div class="sales-table-wrapper">
+      <table class="sales-table">
+        <thead>
+          <tr>
+            <th>Número</th>
+            <th>Comprador</th>
+            <th>Celular</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="salesTableBody"></tbody>
+      </table>
+      <div class="empty-sales" id="emptySales" style="display:none;">No hay ventas registradas.</div>
+    </div>
+  </div>
+
   <div class="share-note" id="shareHint">La imagen descargada NO incluye nombres ni celulares, ni enlaces a esta página — es segura para publicar en redes sociales.</div>
 
   <footer>♥ Juntos podemos hacerlo posible ♥</footer>
@@ -528,7 +608,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 // URL de tu Google Apps Script. Después de publicarlo, pega aquí la URL que termina en /exec.
-const DATA_API_URL = 'https://script.google.com/macros/s/AKfycbw-9OWeY6gb-CR4W7gSUr1G7KdcZbmqLKH77jF4KAH4TM8h6GXzHCkjRNCwMWYJlC2P/exec';
+const DATA_API_URL = 'https://script.google.com/macros/s/AKfycbyUuT5lREJzxYxHdeJICeimmeevCCoJflv9bbl7KhGMlxT_gyL5W3vUCiT74ZvtNq7U/exec';
 let data = {}; // { "00": {name, phone, paid, soldAt} , ... }
 const grid = document.getElementById('grid');
 const overlay = document.getElementById('overlay');
@@ -538,22 +618,27 @@ function pad(n){ return n.toString().padStart(2,'0'); }
 
 function buildGrid(){
   grid.innerHTML = '';
+
   for(let i=0;i<100;i++){
     const key = pad(i);
     const entry = data[key];
     const cell = document.createElement('div');
     let cls = 'cell';
     let content = key;
+
     if(entry){
       cls += entry.paid ? ' sold paid' : ' sold pending';
       content = entry.paid ? '✅' : '⏳';
     }
+
     cell.className = cls;
     cell.textContent = content;
     cell.dataset.key = key;
     cell.addEventListener('click', () => onCellClick(key));
     grid.appendChild(cell);
   }
+
+  renderSales();
 }
 
 
@@ -613,12 +698,15 @@ function showSellForm(key){
 
 function showSoldInfo(key){
   const entry = data[key];
+  if(!entry) return;
+
   modalContent.innerHTML = `
     <span class="num-badge">Número ${key}</span>
     <h3>Vendido 🔨</h3>
     <span class="status-badge ${entry.paid ? 'paid' : 'pending'}">${entry.paid ? '✅ Pagado' : '⏳ Pendiente por pago'}</span>
-    <div class="sold-info"><b>Nombre:</b> ${escapeHtml(entry.name)}</div>
-    <div class="sold-info"><b>Celular:</b> ${escapeHtml(entry.phone)}</div>
+    <div class="sold-info"><b>Nombre:</b> ${escapeHtml(entry.name || '')}</div>
+    <div class="sold-info"><b>Celular:</b> ${escapeHtml(entry.phone || '')}</div>
+    <div class="sold-info"><b>Estado:</b> ${entry.paid ? 'Pagado' : 'Pendiente'}</div>
     <div class="modal-actions">
       <button class="btn btn-secondary" id="closeBtn">Cerrar</button>
       <button class="btn btn-primary" id="toggleBtn">${entry.paid ? '⏳ Marcar pendiente' : '✅ Marcar pagado'}</button>
@@ -627,11 +715,14 @@ function showSoldInfo(key){
       <button class="btn btn-danger" id="freeBtn">✕ Cancelar venta (liberar número)</button>
     </div>
   `;
+
   overlay.classList.add('open');
   document.getElementById('closeBtn').onclick = closeModal;
+
   document.getElementById('toggleBtn').onclick = async () => {
     const previousPaid = entry.paid;
     entry.paid = !entry.paid;
+
     if(await persist()){
       buildGrid();
       closeModal();
@@ -639,10 +730,20 @@ function showSoldInfo(key){
       entry.paid = previousPaid;
     }
   };
+
   document.getElementById('freeBtn').onclick = async () => {
-    if(!confirm(`¿Seguro que quieres cancelar la venta del número ${key}? Esto lo dejará disponible de nuevo.`)) return;
+    const confirmation = confirm(
+      `¿Seguro que quieres cancelar la venta del número ${key}?\n\n` +
+      `Comprador: ${entry.name || ''}\n` +
+      `Celular: ${entry.phone || ''}\n\n` +
+      `El número quedará disponible nuevamente.`
+    );
+
+    if(!confirmation) return;
+
     const previous = data[key];
     delete data[key];
+
     if(await persist()){
       buildGrid();
       closeModal();
@@ -651,6 +752,120 @@ function showSoldInfo(key){
     }
   };
 }
+
+function renderSales(){
+  const tbody = document.getElementById('salesTableBody');
+  const empty = document.getElementById('emptySales');
+  const searchInput = document.getElementById('salesSearch');
+  const filterInput = document.getElementById('salesFilter');
+
+  if(!tbody) return;
+
+  const search = (searchInput?.value || '').trim().toLowerCase();
+  const filter = filterInput?.value || 'all';
+
+  const allSales = Object.keys(data)
+    .sort((a,b) => Number(a) - Number(b))
+    .map(key => ({key, ...data[key]}));
+
+  const sales = allSales.filter(entry => {
+    const matchesSearch = !search ||
+      entry.key.toLowerCase().includes(search) ||
+      String(entry.name || '').toLowerCase().includes(search) ||
+      String(entry.phone || '').toLowerCase().includes(search);
+
+    const matchesFilter = filter === 'all' ||
+      (filter === 'paid' && !!entry.paid) ||
+      (filter === 'pending' && !entry.paid);
+
+    return matchesSearch && matchesFilter;
+  });
+
+  const total = allSales.length;
+  const paid = allSales.filter(entry => !!entry.paid).length;
+  const pending = total - paid;
+
+  document.getElementById('statTotal').textContent = `${total} ${total === 1 ? 'venta' : 'ventas'}`;
+  document.getElementById('statPaid').textContent = `${paid} pagadas`;
+  document.getElementById('statPending').textContent = `${pending} pendientes`;
+
+  tbody.innerHTML = '';
+
+  if(sales.length === 0){
+    empty.style.display = 'block';
+    empty.textContent = total > 0 ? 'No hay ventas que coincidan con la búsqueda.' : 'No hay ventas registradas.';
+    return;
+  }
+
+  empty.style.display = 'none';
+
+  sales.forEach(entry => {
+    const tr = document.createElement('tr');
+    const statusClass = entry.paid ? 'paid' : 'pending';
+    const statusText = entry.paid ? '✅ Pagado' : '⏳ Pendiente';
+
+    tr.innerHTML = `
+      <td><span class="number-badge-table">${escapeHtml(entry.key)}</span></td>
+      <td><strong>${escapeHtml(entry.name || '')}</strong></td>
+      <td>${escapeHtml(entry.phone || '')}</td>
+      <td><span class="payment-badge ${statusClass}">${statusText}</span></td>
+      <td>
+        <div class="sale-actions">
+          <button class="sale-action payment" data-action="payment" data-key="${escapeHtml(entry.key)}">${entry.paid ? '⏳ Pendiente' : '✅ Pagado'}</button>
+          <button class="sale-action free" data-action="free" data-key="${escapeHtml(entry.key)}">✕ Liberar</button>
+        </div>
+      </td>`;
+
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('[data-action="payment"]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const key = button.dataset.key;
+      if(!data[key]) return;
+
+      const previousPaid = data[key].paid;
+      data[key].paid = !data[key].paid;
+      button.disabled = true;
+
+      if(await persist()){
+        buildGrid();
+      } else {
+        data[key].paid = previousPaid;
+        button.disabled = false;
+      }
+    });
+  });
+
+  tbody.querySelectorAll('[data-action="free"]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const key = button.dataset.key;
+      if(!data[key]) return;
+
+      const entry = data[key];
+      const confirmation = confirm(
+        `¿Cancelar la venta del número ${key}?\n\n` +
+        `Comprador: ${entry.name || ''}\n` +
+        `Celular: ${entry.phone || ''}\n\n` +
+        `El número quedará disponible nuevamente.`
+      );
+
+      if(!confirmation) return;
+
+      const previous = data[key];
+      delete data[key];
+      button.disabled = true;
+
+      if(await persist()){
+        buildGrid();
+      } else {
+        data[key] = previous;
+        button.disabled = false;
+      }
+    });
+  });
+}
+
 
 function escapeHtml(str){
   const div = document.createElement('div');
@@ -769,7 +984,11 @@ async function generateImage(){
     const cell = document.createElement('div');
     const sold = !!entry;
     const paid = sold && entry.paid;
-    cell.textContent = paid ? '✓' : sold ? '⏳' : key;
+
+    // En la imagen descargada/compartida, TODO número vendido
+    // queda cubierto con el emoji de martillo 🔨.
+    cell.textContent = sold ? '🔨' : key;
+
     cell.style.aspectRatio = '1';
     cell.style.display = 'flex';
     cell.style.alignItems = 'center';
@@ -777,7 +996,10 @@ async function generateImage(){
     cell.style.borderRadius = '7px';
     cell.style.fontFamily = 'Bitter, serif';
     cell.style.fontWeight = '700';
-    cell.style.fontSize = paid || sold ? '17px' : '14px';
+    cell.style.fontSize = sold ? '24px' : '14px';
+
+    // Se mantiene un color distinto según el estado, pero nunca
+    // se muestra ✓ ni ⏳ en la imagen pública.
     cell.style.background = paid ? '#23361f' : sold ? '#c9822a' : '#fffdf7';
     cell.style.color = paid ? '#f6f1e6' : sold ? '#fff8ec' : '#253c2c';
     cell.style.border = '1.5px solid ' + (paid ? '#23361f' : sold ? '#c9822a' : '#b9975a');
@@ -847,6 +1069,10 @@ document.getElementById('shareBtn').addEventListener('click', async () => {
     btn.disabled = false;
   }
 });
+
+
+document.getElementById('salesSearch').addEventListener('input', renderSales);
+document.getElementById('salesFilter').addEventListener('change', renderSales);
 
 load();
 </script>
