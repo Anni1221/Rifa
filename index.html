@@ -628,7 +628,8 @@ function buildGrid(){
 
     if(entry){
       cls += entry.paid ? ' sold paid' : ' sold pending';
-      content = entry.paid ? '✅' : '⏳';
+      // Todo número vendido queda cubierto con el martillo 🔨.
+      content = '🔨';
     }
 
     cell.className = cls;
@@ -908,6 +909,7 @@ function escapeHtml(str){
 }
 
 let operationInProgress = false;
+let ultimaData = '';
 
 async function apiRequest(action, key, payload = {}){
   if(!DATA_API_URL || DATA_API_URL.includes('PEGA_AQUI')){
@@ -951,6 +953,7 @@ async function load(){
 
     if(result.ok){
       data = result.data || {};
+      ultimaData = JSON.stringify(data);
       buildGrid();
     }
   }catch(e){
@@ -961,8 +964,6 @@ async function load(){
 // =====================================================
 // ACTUALIZACIÓN AUTOMÁTICA ENTRE DISPOSITIVOS
 // =====================================================
-
-let ultimaData = '';
 
 async function actualizarEnTiempoReal(){
   if(operationInProgress) return;
