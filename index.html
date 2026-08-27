@@ -628,8 +628,7 @@ function buildGrid(){
 
     if(entry){
       cls += entry.paid ? ' sold paid' : ' sold pending';
-      // Todo número vendido queda cubierto con el martillo 🔨.
-      content = '🔨';
+      content = entry.paid ? '✅' : '⏳';
     }
 
     cell.className = cls;
@@ -685,25 +684,13 @@ function showSellForm(key){
       document.getElementById('errMsg').style.display = 'block';
       return;
     }
-    const saveBtn = document.getElementById('saveBtn');
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Guardando…';
-
-    const result = await apiRequest('reserve', key, {
-      name,
-      phone,
-      paid
-    });
-
-    if(result.ok){
-      data = result.data || {};
+    const previous = data[key];
+    data[key] = { name, phone, paid, soldAt: new Date().toISOString() };
+    if(await persist()){
       buildGrid();
       closeModal();
     } else {
-      alert(result.error || 'No se pudo reservar el número.');
-      saveBtn.disabled = false;
-      saveBtn.textContent = '🔨 Marcar vendido';
-      await load();
+      if(previous) data[key] = previous; else delete data[key];
     }
   };
   setTimeout(()=>document.getElementById('fname').focus(), 50);
@@ -733,21 +720,14 @@ function showSoldInfo(key){
   document.getElementById('closeBtn').onclick = closeModal;
 
   document.getElementById('toggleBtn').onclick = async () => {
-    const toggleBtn = document.getElementById('toggleBtn');
-    toggleBtn.disabled = true;
+    const previousPaid = entry.paid;
+    entry.paid = !entry.paid;
 
-    const result = await apiRequest('payment', key, {
-      paid: !entry.paid
-    });
-
-    if(result.ok){
-      data = result.data || {};
+    if(await persist()){
       buildGrid();
       closeModal();
     } else {
-      alert(result.error || 'No se pudo actualizar el estado de pago.');
-      toggleBtn.disabled = false;
-      await load();
+      entry.paid = previousPaid;
     }
   };
 
@@ -761,21 +741,14 @@ function showSoldInfo(key){
 
     if(!confirmation) return;
 
-    const freeBtn = document.getElementById('freeBtn');
-    freeBtn.disabled = true;
-    freeBtn.textContent = 'Liberando…';
+    const previous = data[key];
+    delete data[key];
 
-    const result = await apiRequest('free', key);
-
-    if(result.ok){
-      data = result.data || {};
+    if(await persist()){
       buildGrid();
       closeModal();
     } else {
-      alert(result.error || 'No se pudo liberar el número.');
-      freeBtn.disabled = false;
-      freeBtn.textContent = '✕ Cancelar venta (liberar número)';
-      await load();
+      data[key] = previous;
     }
   };
 }
@@ -851,19 +824,15 @@ function renderSales(){
       const key = button.dataset.key;
       if(!data[key]) return;
 
+      const previousPaid = data[key].paid;
+      data[key].paid = !data[key].paid;
       button.disabled = true;
 
-      const result = await apiRequest('payment', key, {
-        paid: !data[key].paid
-      });
-
-      if(result.ok){
-        data = result.data || {};
+      if(await persist()){
         buildGrid();
       } else {
-        alert(result.error || 'No se pudo actualizar el estado de pago.');
+        data[key].paid = previousPaid;
         button.disabled = false;
-        await load();
       }
     });
   });
@@ -883,19 +852,15 @@ function renderSales(){
 
       if(!confirmation) return;
 
+      const previous = data[key];
+      delete data[key];
       button.disabled = true;
-      button.textContent = 'Liberando…';
 
-      const result = await apiRequest('free', key);
-
-      if(result.ok){
-        data = result.data || {};
+      if(await persist()){
         buildGrid();
       } else {
-        alert(result.error || 'No se pudo liberar el número.');
+        data[key] = previous;
         button.disabled = false;
-        button.textContent = '✕ Liberar';
-        await load();
       }
     });
   });
@@ -908,33 +873,24 @@ function escapeHtml(str){
   return div.innerHTML;
 }
 
-let operationInProgress = false;
-let ultimaData = '';
-
-async function apiRequest(action, key, payload = {}){
+async function persist(){
   if(!DATA_API_URL || DATA_API_URL.includes('PEGA_AQUI')){
-    return { ok:false, error:'Falta configurar la URL de Google Apps Script.' };
+    alert('Falta configurar la URL de almacenamiento. Abre el código y pega la URL de tu Google Apps Script.');
+    return false;
   }
-
-  operationInProgress = true;
-
   try{
     const response = await fetch(DATA_API_URL, {
       method: 'POST',
       headers: {'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({ action, key, ...payload })
+      body: JSON.stringify(data)
     });
-
     const result = await response.json();
-    return result;
+    if(!result.ok) throw new Error(result.error || 'No se pudo guardar');
+    return true;
   }catch(e){
-    console.error('Error en la operación:', e);
-    return {
-      ok:false,
-      error:'No se pudo conectar con el servidor. Revisa tu conexión e inténtalo nuevamente.'
-    };
-  }finally{
-    operationInProgress = false;
+    console.error('No se pudo guardar', e);
+    alert('No se pudo guardar la información. Revisa la conexión e inténtalo de nuevo.');
+    return false;
   }
 }
 
@@ -943,54 +899,55 @@ async function load(){
     buildGrid();
     return;
   }
-
   try{
-    const response = await fetch(DATA_API_URL + '?t=' + Date.now(), {
-      cache:'no-store'
-    });
-
+    const response = await fetch(DATA_API_URL + '?t=' + Date.now(), {cache:'no-store'});
     const result = await response.json();
-
-    if(result.ok){
-      data = result.data || {};
-      ultimaData = JSON.stringify(data);
-      buildGrid();
-    }
+    data = result.data || {};
   }catch(e){
     console.error('No se pudo cargar la información', e);
+    data = {};
   }
+  buildGrid();
 }
 
-// =====================================================
-// ACTUALIZACIÓN AUTOMÁTICA ENTRE DISPOSITIVOS
-// =====================================================
+/* ===== Actualización automática (sondeo) =====
+   Cada pocos segundos consulta el Apps Script y, si hay cambios
+   (por ejemplo alguien más registró o marcó una venta), refresca
+   la cuadrícula y el panel de ventas sin recargar la página. */
+let isSyncing = false;
+const SYNC_INTERVAL_MS = 5000;
 
-async function actualizarEnTiempoReal(){
-  if(operationInProgress) return;
+async function syncData(){
   if(!DATA_API_URL || DATA_API_URL.includes('PEGA_AQUI')) return;
+  if(isSyncing) return;              // evita solicitudes superpuestas
+  if(overlay.classList.contains('open')) return; // no interrumpe si hay un modal abierto
 
+  isSyncing = true;
   try{
-    const response = await fetch(DATA_API_URL + '?t=' + Date.now(), {
-      cache:'no-store'
-    });
-
+    const response = await fetch(DATA_API_URL + '?t=' + Date.now(), {cache:'no-store'});
     const result = await response.json();
+    const newData = result.data || {};
 
-    if(!result.ok) return;
-
-    const nuevaData = result.data || {};
-    const nuevaVersion = JSON.stringify(nuevaData);
-
-    if(nuevaVersion !== ultimaData){
-      ultimaData = nuevaVersion;
-      data = nuevaData;
+    if(JSON.stringify(newData) !== JSON.stringify(data)){
+      data = newData;
       buildGrid();
     }
   }catch(e){
-    console.error('Actualización en tiempo real falló:', e);
+    console.error('No se pudo sincronizar automáticamente', e);
+  }finally{
+    isSyncing = false;
   }
 }
 
+setInterval(syncData, SYNC_INTERVAL_MS);
+
+// Al cerrar un modal (después de vender/marcar/liberar), sincroniza de inmediato
+overlay.addEventListener('click', (e)=>{ if(e.target === overlay) syncData(); });
+
+// Al volver a la pestaña, sincroniza al instante (por si estuvo mucho tiempo inactiva)
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible') syncData();
+});
 
 overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeModal(); });
 
@@ -1157,10 +1114,6 @@ document.getElementById('salesSearch').addEventListener('input', renderSales);
 document.getElementById('salesFilter').addEventListener('change', renderSales);
 
 load();
-
-// Primera comprobación y luego cada 2 segundos.
-actualizarEnTiempoReal();
-setInterval(actualizarEnTiempoReal, 2000);
 </script>
 </body>
 </html>
