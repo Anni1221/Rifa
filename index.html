@@ -110,6 +110,113 @@
     line-height: 1.55;
     color: #e7e2d0;
   }
+
+  /* Pago por Nequi */
+  .nequi-card{
+    margin: 0 0 22px;
+    padding: 20px 24px;
+    border: 1px solid var(--sage);
+    border-radius: 18px;
+    background: linear-gradient(135deg, #fffdf7 0%, #f5f0e2 100%);
+    box-shadow: 0 8px 24px rgba(37,60,44,.08);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:22px;
+  }
+  .nequi-brand{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    min-width:0;
+  }
+  .nequi-logo{
+    width:62px;
+    height:62px;
+    display:block;
+    flex:0 0 62px;
+    flex:0 0 62px;
+  }
+  .nequi-copy{
+    min-width:0;
+  }
+  .nequi-kicker{
+    margin:0 0 4px;
+    font-family:'Jost',sans-serif;
+    font-size:12px;
+    font-weight:800;
+    letter-spacing:1.2px;
+    text-transform:uppercase;
+    color:var(--deep-green);
+  }
+  .nequi-copy h3{
+    margin:0 0 5px;
+    font-family:'Playfair Display',serif;
+    font-size:23px;
+    color:var(--deep-green);
+  }
+  .nequi-copy p{
+    margin:0;
+    font-size:14px;
+    line-height:1.45;
+  }
+  .nequi-number-box{
+    text-align:center;
+    padding:13px 18px;
+    border-radius:14px;
+    background:var(--deep-green);
+    color:var(--cream);
+    min-width:210px;
+  }
+  .nequi-number-label{
+    display:block;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.8px;
+    text-transform:uppercase;
+    opacity:.85;
+    margin-bottom:3px;
+  }
+  .nequi-number{
+    display:block;
+    font-family:'Bitter',serif;
+    font-size:23px;
+    font-weight:800;
+    letter-spacing:1px;
+  }
+  .nequi-holder{
+    display:block;
+    margin-top:3px;
+    font-size:13px;
+  }
+  .nequi-copy-btn{
+    margin-top:8px;
+    border:1px solid rgba(255,255,255,.45);
+    border-radius:8px;
+    padding:5px 10px;
+    background:transparent;
+    color:var(--cream);
+    font-family:'Jost',sans-serif;
+    font-size:12px;
+    cursor:pointer;
+  }
+  .nequi-copy-btn:hover{
+    background:rgba(255,255,255,.12);
+  }
+  @media(max-width:700px){
+    .nequi-card{
+      flex-direction:column;
+      align-items:stretch;
+      text-align:center;
+    }
+    .nequi-brand{
+      justify-content:center;
+    }
+    .nequi-number-box{
+      min-width:0;
+    }
+  }
+
   .prize-row{
     display:flex;
     gap: 10px;
@@ -534,6 +641,31 @@
     </p>
   </div>
 
+
+  <!-- Información de pago -->
+  <div class="nequi-card" aria-label="Información de pago por Nequi">
+    <div class="nequi-brand">
+      <svg class="nequi-logo" viewBox="0 0 120 120" role="img" aria-label="Logo de Nequi" xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="4" width="112" height="112" rx="28" fill="#200020"/>
+      <path d="M35 84V36h10l30 31V36h10v48H75L45 53v31H35z" fill="#fff"/>
+    </svg>
+      <div class="nequi-copy">
+        <div class="nequi-kicker">Medio de pago</div>
+        <h3>Realiza tu pago por Nequi</h3>
+        <p>Envía el valor de tu número y conserva el comprobante de pago.</p>
+      </div>
+    </div>
+
+    <div class="nequi-number-box">
+      <span class="nequi-number-label">Paga a este número</span>
+      <span class="nequi-number">313 863 4813</span>
+      <span class="nequi-holder">Luis Ballesteros</span>
+      <button type="button" class="nequi-copy-btn" id="copyNequiBtn">
+        📋 Copiar número
+      </button>
+    </div>
+  </div>
+
   <div class="prize-row" style="margin:0 0 22px;">
     <div class="prize-chip" style="background:var(--deep-green-2);color:var(--cream);">
       <b>🎟️ FECHA DEL SORTEO</b>
@@ -610,7 +742,7 @@
     </div>
   </div>
 
-  <div class="share-note" id="shareHint">La imagen descargada NO incluye nombres ni celulares, ni enlaces a esta página — es segura para publicar en redes sociales.</div>
+  <div class="share-note" id="shareHint">La imagen descargada no incluye nombres ni celulares de compradores ni enlaces a esta página. Incluye únicamente los datos de pago por Nequi.</div>
 
   <footer>♥ Juntos podemos hacerlo posible ♥</footer>
   <div class="share-note">Los datos de esta versión se almacenan en el sistema de la aplicación para conservar los números registrados.</div>
@@ -628,6 +760,35 @@ let data = {}; // { "00": {name, phone, paid, soldAt} , ... }
 const grid = document.getElementById('grid');
 const overlay = document.getElementById('overlay');
 const modalContent = document.getElementById('modalContent');
+setupNequiCopy();
+
+
+function setupNequiCopy(){
+  const btn = document.getElementById('copyNequiBtn');
+  if(!btn) return;
+
+  btn.addEventListener('click', async () => {
+    const number = '3138634813';
+    const originalText = btn.textContent;
+
+    try{
+      await navigator.clipboard.writeText(number);
+      btn.textContent = '✅ Número copiado';
+    }catch(error){
+      const temp = document.createElement('input');
+      temp.value = number;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      temp.remove();
+      btn.textContent = '✅ Número copiado';
+    }
+
+    setTimeout(() => {
+      btn.textContent = originalText;
+    }, 1800);
+  });
+}
 
 function pad(n){ return n.toString().padStart(2,'0'); }
 
@@ -1027,6 +1188,21 @@ async function generateImage(){
     <div id="posterGrid" style="display:grid;grid-template-columns:repeat(10,1fr);gap:6px;background:#efe8d8;border:1px solid #c7d3b8;border-radius:15px;padding:14px;"></div>
 
     <div style="text-align:center;background:#c7d3b8;color:#253c2c;font-family:'Playfair Display',serif;font-style:italic;font-size:16px;padding:12px;border-radius:999px;margin-top:18px;">♥ Juntos podemos hacerlo posible ♥</div>
+
+    <div style="margin-top:16px;background:#fffdf7;border:1.5px solid #c7d3b8;border-radius:14px;padding:14px 18px;text-align:center;">
+      <div style="font-family:'Bitter',serif;font-size:12px;font-weight:800;letter-spacing:.08em;color:#2f4a37;text-transform:uppercase;margin-bottom:5px;">
+        💜 PAGO POR NEQUI
+      </div>
+      <div style="font-family:'Bitter',serif;font-size:25px;font-weight:800;color:#2f4a37;letter-spacing:1px;">
+        313 863 4813
+      </div>
+      <div style="font-family:'Jost',sans-serif;font-size:14px;color:#55584f;margin-top:2px;">
+        Luis Ballesteros
+      </div>
+      <div style="font-family:'Jost',sans-serif;font-size:12px;color:#777;margin-top:5px;">
+        Realiza tu pago y conserva el comprobante.
+      </div>
+    </div>
   `;
 
   document.body.appendChild(poster);
